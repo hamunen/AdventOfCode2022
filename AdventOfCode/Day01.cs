@@ -2,35 +2,27 @@
 
 public class Day01 : BaseDay
 {
-    private readonly string _input;
-    private readonly string _result;
-    private readonly string _result2;
-
+    private readonly IEnumerable<IEnumerable<int>> _elvesCalories;
 
     public Day01()
     {
-        _input = File.ReadAllText(InputFilePath);
-
-        // put into methods??
-
-        var elves = _input.Split(new string[] { Environment.NewLine + Environment.NewLine },
+        var input = File.ReadAllText(InputFilePath);
+        var elves = input.Split(new string[] { Environment.NewLine + Environment.NewLine },
                                StringSplitOptions.RemoveEmptyEntries);
-
-        var elvesCalories = elves.Select(e => e.Split(Environment.NewLine).Select(Int32.Parse));
-
-        var mostCalories = elvesCalories.Max(e => e.Sum());
-        _result = mostCalories.ToString();
-
-        // 2
-        var topThreeCaloryCarryingElves = elvesCalories
-            .OrderByDescending(e => e.Sum())
-            .Take(3)
-            .Sum(e => e.Sum());
-
-        _result2 = topThreeCaloryCarryingElves.ToString();
+        _elvesCalories = elves.Select(e => e.Split(Environment.NewLine).Select(Int32.Parse));
     }
 
-    public override ValueTask<string> Solve_1() => new(_result);
- 
-    public override ValueTask<string> Solve_2() => new(_result2);
+    public override ValueTask<string> Solve_1() {
+        var mostCalories = _elvesCalories.Max(e => e.Sum());
+        return new ValueTask<string>(mostCalories.ToString());
+        }
+
+public override ValueTask<string> Solve_2()
+    {
+        var caloriesOfTopThreeElves = _elvesCalories
+           .OrderByDescending(e => e.Sum())
+           .Take(3)
+           .Sum(e => e.Sum());
+        return new ValueTask<string>(caloriesOfTopThreeElves.ToString());
+    }
 }

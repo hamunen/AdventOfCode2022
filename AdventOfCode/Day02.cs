@@ -3,33 +3,30 @@
 public class Day02 : BaseDay
 {
     private readonly string _input;
-    private readonly string _result;
-    private readonly string _result2;
+    private readonly string[] _roundsInput;
 
     public Day02()
     {
         _input = File.ReadAllText(InputFilePath);
-
-        var roundsInput = _input.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
-
-        var rounds1 = roundsInput
-            .Select(inputLine => RockPaperScissorsRound.GetRoundFromInputLine_PlayerInputAsShape(inputLine));
-
-        _result = rounds1.Sum(r => r.GetRoundScore()).ToString();
-
-        var rounds2 = roundsInput
-            .Select(inputLine => RockPaperScissorsRound.GetRoundFromInputLine_PlayerInputAsStrategy(inputLine));
-
-        _result2 = rounds2.Sum(r => r.GetRoundScore()).ToString();
+        _roundsInput = _input.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
     }
 
 
-    public override ValueTask<string> Solve_1() //=> new(_result);
+    public override ValueTask<string> Solve_1()
     {
-        return new ValueTask<string>(_result);
+        var roundsBasedOnPlayerActionInput = _roundsInput
+            .Select(inputLine => RockPaperScissorsRound.GetRoundFromInputLine_PlayerInputAsShape(inputLine));
+        var totalScore = roundsBasedOnPlayerActionInput.Sum(r => r.GetRoundScore());
+        return new ValueTask<string>(totalScore.ToString());
     }
- 
-    public override ValueTask<string> Solve_2() => new(_result2);
+
+    public override ValueTask<string> Solve_2()
+    {
+        var roundsBasedOnStrategyInput = _roundsInput
+            .Select(inputLine => RockPaperScissorsRound.GetRoundFromInputLine_PlayerInputAsStrategy(inputLine));
+        var totalScore = roundsBasedOnStrategyInput.Sum(r => r.GetRoundScore());
+        return new ValueTask<string>(totalScore.ToString());
+    }
 }
 
 public class RockPaperScissorsRound
