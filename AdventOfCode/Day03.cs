@@ -55,10 +55,11 @@ public class Rucksack
         var commonItem = FindCommonItemInRucksacks(rucksacks);
         return GetItemPriority(commonItem);
     }
+
     private static char FindCommonItemInRucksacks(Rucksack[] rucksacks)
     {
-        var firstRuckSack = rucksacks[0];
-        IEnumerable<char> commonItems = firstRuckSack._allContent;
+        var firstRucksack = rucksacks[0];
+        IEnumerable<char> commonItems = firstRucksack._allContent;
         foreach (var rucksack in rucksacks[1..])
         {
             commonItems = commonItems.Intersect(rucksack._allContent);
