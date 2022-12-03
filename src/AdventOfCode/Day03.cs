@@ -1,5 +1,6 @@
 ﻿namespace AdventOfCode;
 
+[ExcludeFromCodeCoverage]
 public class Day03 : BaseDay
 {
     private readonly IEnumerable<Rucksack> _rucksacks;
@@ -41,9 +42,9 @@ public class Rucksack
 
     public int GetDuplicateItemPriority() => GetItemPriority(FindDuplicateItem());
 
-    private char FindDuplicateItem() => _compartment1.Intersect(_compartment2).First();
+    public char FindDuplicateItem() => _compartment1.Intersect(_compartment2).First();
 
-    private static int GetItemPriority(char item)
+    public static int GetItemPriority(char item)
     {
         var itemAsciiNo = (int)item;
         var priority = (itemAsciiNo < 97 ? itemAsciiNo - 64 + 26 : itemAsciiNo - 96);
@@ -56,7 +57,7 @@ public class Rucksack
         return GetItemPriority(commonItem);
     }
 
-    private static char FindCommonItemInRucksacks(Rucksack[] rucksacks)
+    public static char FindCommonItemInRucksacks(Rucksack[] rucksacks)
     {
         var firstRucksack = rucksacks[0];
         IEnumerable<char> commonItems = firstRucksack._allContent;
