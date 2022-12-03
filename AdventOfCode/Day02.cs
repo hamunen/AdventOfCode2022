@@ -2,13 +2,12 @@
 
 public class Day02 : BaseDay
 {
-    private readonly string _input;
     private readonly string[] _roundsInput;
 
     public Day02()
     {
-        _input = File.ReadAllText(InputFilePath);
-        _roundsInput = _input.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+        var input = File.ReadAllText(InputFilePath);
+        _roundsInput = input.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
     }
 
 
