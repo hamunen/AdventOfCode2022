@@ -55,13 +55,7 @@ public class Rope
         VisitedTailPositions.Add(TailPosition);
     }
 
-    public void VisualizeView()
-    {
-        DataGridView grid = new DataGridView();
-
-    }
-
-    public string Visualize()
+    public string VisualizeToConsole()
     {
         char[,] grid = new char[60, 60];
         for (int i = 0; i < 60; i++)
