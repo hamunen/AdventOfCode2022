@@ -5,10 +5,9 @@ namespace AdventOfCode;
 [ExcludeFromCodeCoverage]
 public class Day10 : BaseDay
 {
-    private string _input;
+    private readonly string _input;
     public Day10()
     {
-        Console.WriteLine(InputFilePath);
         _input = File.ReadAllText(InputFilePath);
     }
 
@@ -30,9 +29,79 @@ public class Day10 : BaseDay
 
     public override ValueTask<string> Solve_2()
     {
-        var result = 2;
+        var device = new CommunicationDevice();
+        device.ProcessFullInstructionsInput(_input);
+        device.DrawToScreen();
+
+        // Needs to be read from screen :)
+        var result = "RLEZFLGE";
         return new(result.ToString());
     }
+}
+
+
+public sealed class CommunicationDevice
+{
+    private CommunicationDeviceCPU cpu;
+    private CommunicationDeviceCRT crt;
+
+    public CommunicationDevice()
+    {
+        cpu = new CommunicationDeviceCPU();
+        crt = new CommunicationDeviceCRT();
+    }
+
+    public void ProcessFullInstructionsInput(string input)
+    {
+        cpu.ProcessFullInstructionsInput(input);
+    }
+
+    public void DrawToScreen()
+    {
+        for (int i = 1; i < cpu.RegisterXHistoryAfterCycle.Count; i++)
+        {
+            crt.DrawPixel(i, cpu.RegisterXHistoryAfterCycle[i - 1]);
+        }
+        crt.PrintScreen();
+    }
+}
+
+public sealed class CommunicationDeviceCRT
+{
+    public char[,] Screen { get; set; }
+
+    private const int SCREEN_WIDTH = 40;
+    private const int SCREEN_HEIGHT = 6;
+
+    public CommunicationDeviceCRT() {
+        Screen = new char[SCREEN_HEIGHT, SCREEN_WIDTH];
+    }
+
+    public void DrawPixel(int cycle, int spriteMidPosition)
+    {
+        var row = (cycle - 1) / SCREEN_WIDTH;
+        var pixelPosition = (cycle - 1) % SCREEN_WIDTH;
+
+        var pixelIsLit = Math.Abs(pixelPosition - spriteMidPosition) <= 1;
+
+        var pixel = pixelIsLit ? '#' : '.';
+        Screen[row, pixelPosition] = pixel;
+    }
+
+    public void PrintScreen()
+    {
+        Console.Clear();
+        for (int i = 0; i < SCREEN_HEIGHT; i++)
+        {
+            var row = "";
+            for (int j = 0; j < SCREEN_WIDTH; j++)
+            {
+                row += Screen[i, j];
+            }
+            Console.WriteLine(row);
+        }
+    }
+
 }
 
 public sealed class CommunicationDeviceCPU

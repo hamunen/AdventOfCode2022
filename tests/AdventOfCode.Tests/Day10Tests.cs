@@ -22,5 +22,15 @@ namespace AdventOfCode.Tests
             var result = cpu.GetSignalStrengthDuringCycle(20);
             Assert.Equal(420, result);
         }
+
+        [Fact]
+        public void GetSignalStrengthDuringCycle_220()
+        {
+            var cpu = new CommunicationDeviceCPU();
+            cpu.ProcessFullInstructionsInput(_testInput1);
+
+            var result = cpu.GetSignalStrengthDuringCycle(220);
+            Assert.Equal(3960, result);
+        }
     }
 }
