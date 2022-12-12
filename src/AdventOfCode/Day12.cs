@@ -24,10 +24,15 @@ public class Day12 : BaseDay
 
     public override ValueTask<string> Solve_2()
     {
-        var result = 2;
+        var map = HeightMap.ParseFromInput(_input);
+        var pathFinder = new PathFinder(map);
+        var result = pathFinder.GetShortestPathFromAnyAToEnd();
         return new(result.ToString());
     }
 }
+
+/* TODO: refactor
+ * This solution is... not great and messy */
 
 public sealed class HeightMap
 {
@@ -37,9 +42,6 @@ public sealed class HeightMap
 
     public int MaxX => _maxX;
     public int MaxY => _maxY;
-
-    // elevation?
-    // get awlksable squares
 
     private readonly int _maxX;
     private readonly int _maxY;
@@ -85,7 +87,7 @@ public sealed class HeightMap
         return map;
     }
 
-    public List<Square> GetWalkabledjacentSquares(Square square)
+    public List<Square> GetWalkableAdjacentSquares(Square square)
     {
         var possibleSquares = new List<Square>()
         {
@@ -99,10 +101,26 @@ public sealed class HeightMap
             .Where(s => IsWalkableTo(square, s)).ToList();
     }
 
+    public List<Square> GetReverseWalkableAdjacentSquares(Square square)
+    {
+        var possibleSquares = new List<Square>()
+        {
+            new Square(square.X, square.Y-1),
+            new Square(square.X, square.Y+1),
+            new Square(square.X-1, square.Y),
+            new Square(square.X+1, square.Y),
+        };
+
+        return possibleSquares
+            .Where(s => IsWalkableTo(s, square)).ToList();
+    }
+
     public bool IsWalkableTo(Square from, Square destination)
     {
         if (destination.X < 0 || destination.X > MaxX) return false;
         if (destination.Y < 0 || destination.Y > MaxY) return false;
+        if (from.X < 0 || from.X > MaxX) return false;
+        if (from.Y < 0 || from.Y > MaxY) return false;
 
         var currentElevation = Grid[from.X, from.Y];
         var destinationElevation = Grid[destination.X, destination.Y];
@@ -127,7 +145,7 @@ public sealed class PathFinder
             Map.Start.GetDistanceTo(Map.End)));
     }
 
-    private int HeuristicScore(PathFindingSquare square)
+    private static int HeuristicScore(PathFindingSquare square)
     {
         // not sure why the elevation distance doesnt work well...
         // needs to be admissible heuristic?
@@ -156,7 +174,7 @@ public sealed class PathFinder
             ActiveSquares.Remove(square);
 
             var walkableSquares = Map
-                .GetWalkabledjacentSquares(square)
+                .GetWalkableAdjacentSquares(square)
                 .Select(s => new PathFindingSquare(s, square, s.GetDistanceTo(Map.End)));
 
             CheckWalkableSquares(walkableSquares);
@@ -242,7 +260,7 @@ public sealed class PathFinder
     public int GetShortestPathLength()
     {
         FindShortestPath();
-        VisualizePath(EndSquare);
+        // VisualizePath(EndSquare);
         return EndSquare.TravelsalCost;
     }
 
@@ -267,6 +285,50 @@ public sealed class PathFinder
         }
     }
 
+    public int GetShortestPathFromAnyAToEnd()
+    {
+        // dijkstra's algorithm, starting from end
+        var unvisitedSquares = new List<HikingSquare>();
+        var visitedSquares = new List<HikingSquare>();
+
+        for (int i = 0; i <= Map.MaxX; i++)
+        {
+            for (int j = 0; j <= Map.MaxY; j++)
+            {
+                unvisitedSquares.Add(new HikingSquare(i, j));
+            }
+        }
+
+        unvisitedSquares.First(s => s.Equals(Map.End)).ShortestDistanceFromStart = 0;
+
+        while (unvisitedSquares.Any(s => s.ShortestDistanceFromStart != 999999))
+        {
+            var square = unvisitedSquares.OrderBy(s => s.ShortestDistanceFromStart).First();
+
+            var adjacentSquares =
+                Map.GetReverseWalkableAdjacentSquares(square).Select(s => new HikingSquare(s)).ToList();
+            var unvisitedNeighbors = unvisitedSquares.Where(s => adjacentSquares.Contains(s));
+
+            foreach (var neighbor in unvisitedNeighbors)
+            {
+                var distanceFromStart = square.ShortestDistanceFromStart + 1;
+                if (distanceFromStart < neighbor.ShortestDistanceFromStart)
+                {
+                    neighbor.ShortestDistanceFromStart = distanceFromStart;
+                    neighbor.Previous = square;
+                }
+            }
+
+            visitedSquares.Add(square);
+            unvisitedSquares.Remove(square);
+        }
+        var asd = visitedSquares
+            .Where(s => Map.GetElevation(s) == 'a')
+            .OrderBy(s => s.ShortestDistanceFromStart)
+            .First();
+
+        return asd.ShortestDistanceFromStart;
+    }
 
 }
 
@@ -297,6 +359,8 @@ public class Square
         return X == other.X && Y == other.Y;
     }
 
+    public override int GetHashCode() => (X.GetHashCode() * 397) ^ Y.GetHashCode();
+
     public int GetDistanceTo(Square other) => 
         Math.Abs(X - other.X) + Math.Abs(Y - other.Y);
 }
@@ -322,5 +386,19 @@ public sealed class PathFindingSquare : Square
     public override string ToString()
     {
         return base.ToString();
+    }
+}
+
+public sealed class HikingSquare : Square
+{
+    public int ShortestDistanceFromStart { get; set; }
+    public HikingSquare Previous { get; set; }
+
+    public HikingSquare(Square square) : base(square.X, square.Y) {
+        ShortestDistanceFromStart = 999999;
+    }
+
+    public HikingSquare(int x, int y) : base(x, y) {
+        ShortestDistanceFromStart = 999999;
     }
 }
