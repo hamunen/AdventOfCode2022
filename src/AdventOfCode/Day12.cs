@@ -1,6 +1,4 @@
 ﻿
-using Spectre.Console;
-using System.ComponentModel;
 
 namespace AdventOfCode;
 
@@ -185,13 +183,6 @@ public sealed class PathFinder
                 Console.WriteLine(square.ToString());
             }*/
 
-        }
-
-        if (EndSquare is null)
-        {
-            Console.WriteLine("Well shit");
-            var lastSquare = VisitedSquares.Last();
-            VisualizePath(lastSquare);
         }
     }
 
