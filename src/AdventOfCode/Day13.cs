@@ -1,7 +1,4 @@
 ﻿using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Xml.Linq;
-
 
 namespace AdventOfCode;
 
@@ -195,6 +192,7 @@ public sealed class Packet : IComparable<Packet>
         Undecided
     }
 
+    // ok I should've used System.Text.Json.Nodes and Enumerable.Zip
     private static Order AreElementsInRightOrder(PacketElement left, PacketElement right)
     {
         if (!left.HasInnerEelements && !right.HasInnerEelements)
