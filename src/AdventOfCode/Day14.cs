@@ -1,6 +1,4 @@
 ﻿using System.Text;
-using System.Windows.Forms;
-using static System.Windows.Forms.DataFormats;
 
 namespace AdventOfCode;
 
@@ -42,7 +40,6 @@ public sealed class Cave
 {
     private readonly int _maxX;
     private readonly int _maxY;
-    public char[,] Map { get; set; }
     public Dictionary<(int X, int Y), char> Grid { get; set; }
     public List<List<char>> Coordinates { get; set; }
     private (int x, int y) _sandSource = (500, 0);
@@ -55,7 +52,6 @@ public sealed class Cave
         _maxX = maxX;
         _maxY = maxY;
         _floorY = maxY + 2;
-        Map = new char[maxX + 1, maxY + 1];
         Grid = new();
         Grid[_sandSource] = '+';
     }
@@ -74,7 +70,6 @@ public sealed class Cave
         var cave = new Cave(rocks.Max(r => r.X), rocks.Max(r => r.Y));
         foreach (var coord in rocks)
         {
-            cave.Map[coord.X, coord.Y] = '#';
             cave.Grid[(coord.X, coord.Y)] = '#';
         }
 
@@ -155,9 +150,6 @@ public sealed class Cave
 
     public void Draw()
     {
-        //ApplicationConfiguration.Initialize();
-        //Application.Run(new AocForm(Grid));
-
         ReDraw();
 
         while (true)
@@ -219,15 +211,6 @@ public sealed class Coordinate
 {
     public int X { get; set; }
     public int Y { get; set; }
-    //public Element Element { get; set; }
 
     public Coordinate(int x, int y) { X = x; Y = y; }
-}
-
-
-public enum Element
-{
-    Rock = '#',
-    Air = ' ',
-    Sand = 'o'
 }
