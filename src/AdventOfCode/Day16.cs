@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -26,7 +27,10 @@ public class Day16 : BaseDay
 
     public override ValueTask<string> Solve_2()
     {
-        return new(2.ToString());
+        var volcano = new Volcano(_input);
+        var finder = new Finder(volcano.AllValves);
+        var result = finder.FindElephantRoutes();
+        return new(result.ToString());
     }
 }
 
@@ -84,9 +88,6 @@ public sealed class Volcano
     }
 }
 
-// OK I think I could dijkstra this also?
-// when valve is turned on, it's basically "visited". yes. yes. yes.
-// or maybe no? since these are variable values
 public sealed class Finder
 {
     public Valve[] AllValves { get; set; }
@@ -95,31 +96,14 @@ public sealed class Finder
     public Finder(Valve[] allValves)
     {
         AllValves = allValves;
-        FinishedRoutes = new List<Route>();
+        FinishedRoutes = new();
     }
-
-    public IEnumerable<Route> Routes { get; set; }  
-    // brute force try everything?
-    // consider only valves with some value
 
     public int FindRoutes()
     {
         var start = AllValves.First(v => v.Name == "AA");
         var rootRoute = new Route(start, 30);
         TraverseNext(rootRoute);
-        var first = FinishedRoutes
-            .OrderByDescending(r => r.ValueAtEnd).First();
-
-        var ordered = FinishedRoutes.OrderByDescending(r => r.ValueAtEnd);
-
-        /*
-        Console.WriteLine();
-        while (first.Parent != null)
-        {
-            Console.WriteLine(first.ToString());
-            Console.WriteLine(first.DetailsToString());
-            first = first.Parent;
-        }*/
 
         return FinishedRoutes
             .Select(r => r.ValueAtEnd)
@@ -127,6 +111,52 @@ public sealed class Finder
             .First();
     }
 
+    // find two routes with no shared opened valves that combine to max!
+    public int FindElephantRoutes()
+    {        
+        var start = AllValves.First(v => v.Name == "AA");
+        var rootRoute = new Route(start, 26);
+        TraverseNext(rootRoute);
+
+        var allRoutes = FinishedRoutes
+            .GroupBy(r => r.OpenedValves.ToHashSet())
+            .ToDictionary(g => g.Key, g => g.Max(r => r.ValueAtEnd));
+
+        // iterate through parents to add "partial" routes
+        foreach (var finRoute in FinishedRoutes)
+        {
+            var parent = finRoute.Parent;
+            while (parent != null)
+            {
+                var openedValves = parent.OpenedValves.ToHashSet();
+                int existingVal;
+                if (!allRoutes.TryGetValue(openedValves, out existingVal) || existingVal < parent.ValueAtEnd)
+                {
+                    allRoutes[openedValves] = parent.ValueAtEnd;
+                }
+                parent = parent.Parent;
+            }
+        }
+
+        var anyRouteMaxValue = allRoutes.Values.Max();
+        var best = 0;
+        foreach (var route in allRoutes.OrderByDescending(r => r.Value))
+        {
+            var minValueNeeded = best - route.Value;
+            if (minValueNeeded > anyRouteMaxValue) continue;
+
+            var complementingRoutes = allRoutes
+                .Where(br => br.Value > minValueNeeded && !br.Key.Intersect(route.Key).Any());
+            if (!complementingRoutes.Any()) continue;
+
+            var bestComplementingRouteValue = complementingRoutes.Max(cr => cr.Value) + route.Value;
+            if (bestComplementingRouteValue > best) best = bestComplementingRouteValue;
+        }
+
+        return best;
+    }
+
+    // dijkstra possible?
     public void TraverseNext(Route route)
     {
  
@@ -158,7 +188,6 @@ public sealed class Finder
         }
     }
 
-
     public static int FindTraversalCost(Valve start, Valve destination, Valve[] allValves)
     {
         var unvisited = new Dictionary<Valve, int> ();
@@ -176,7 +205,6 @@ public sealed class Finder
             
             if (current.Key.Name == destination.Name)
             {
-                // found it, do something
                 return current.Value;
             }
 
@@ -193,19 +221,9 @@ public sealed class Finder
             }
         }
 
-
         return 0;
-
     }
-}
 
-public class ValveInSearch : Valve
-{
-    public ValveInSearch(string name, int flowRate) : base(name, flowRate) { }
-
-    public ValveInSearch(Valve valve) : base(valve.Name, valve.FlowRate)
-    { 
-    }
 }
 
 public sealed class Route
@@ -217,12 +235,17 @@ public sealed class Route
     public bool Finished { get; set; }
     public Route Parent { get; set; }
 
+    public string OpenedValvesToString()
+    {
+        var builder = new StringBuilder();
+        return builder.AppendJoin(" ", OpenedValves.Order()).ToString();
+    }
+
     public Route(Route parent, Valve newValve, int timeLeft)
     {
         OpenedValves = parent.OpenedValves.Append(newValve.Name);
         CurrentPosition = newValve.Name;
         TimeLeft = timeLeft;
-        // not sure if needs to be minused?
         ValueAtEnd = parent.ValueAtEnd + newValve.FlowRate * (timeLeft);
         Finished = timeLeft <= 2 ? true : false;
         Parent = parent;
@@ -268,6 +291,7 @@ public class Valve
     public int GetValueIfTraveledAndOpened(Valve from, int timeLeft)
     {
         if (FlowRate == 0) return 0;
+        if (from.Name == Name) return FlowRate * timeLeft; // en tiedä tästä, ei ihan oikein...
         var timeAfterOpening = timeLeft - from.TimeToTravelTo[Name] - 1;
         if (timeAfterOpening <= 0) return 0;
         return FlowRate * timeAfterOpening;
