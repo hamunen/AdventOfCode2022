@@ -15,7 +15,6 @@ public class Day19 : BaseDay
 
     public override ValueTask<string> Solve_1()
     {
-        // varmaan kantsii ottaa huomioon jos ei ehi enää rakentaa geode robottia niin turha jatkaa?
         var situation = new RobotSituation(_input);
         var result = situation.Test();
         return new(result.ToString());
@@ -23,8 +22,9 @@ public class Day19 : BaseDay
 
     public override ValueTask<string> Solve_2()
     {
-        return new(2.ToString());
-
+        var situation = new RobotSituation(_input);
+        var result = situation.Test2();
+        return new(result.ToString());
     }
 }
 
@@ -41,7 +41,7 @@ public sealed class RobotSituation
         foreach (var blueprint in Blueprints)
         {
             var scenario = new RobotBuildingScenario(blueprint, 24);
-            var scenarioBestValue = scenario.GetBestValue(new Dictionary<int, byte>(), 0);
+            var scenarioBestValue = scenario.GetHowManyGeodesCanBeGotten(new Dictionary<int, byte>(), 0);
             qualityLevelSums += blueprint.Index * scenarioBestValue;
             Console.WriteLine($"Blueprint {blueprint.Index}, best value {scenarioBestValue}");
         }
@@ -56,7 +56,7 @@ public sealed class RobotSituation
         foreach (var blueprint in Blueprints.Where(bp => bp.Index <= 3))
         {
             var scenario = new RobotBuildingScenario(blueprint, 32);
-            var scenarioBestValue = scenario.GetBestValue(new Dictionary<int, byte>(), 0);
+            var scenarioBestValue = scenario.GetHowManyGeodesCanBeGotten(new Dictionary<int, byte>(), 0);
             value *= scenarioBestValue;
             Console.WriteLine($"Blueprint {blueprint.Index}, best value {scenarioBestValue}");
         }
@@ -87,7 +87,7 @@ public sealed class RobotBuildingScenario
     }
 
     public RobotBuildingScenario(Blueprint blueprint, int timeLeft,
-        int ores, int clays, int obsidians, int geodes,
+        int ores, int clays, int obsidians,
         int oreRobots, int clayRobots, int obsidianRobots, int geodeRobots
         )
     {
@@ -96,53 +96,66 @@ public sealed class RobotBuildingScenario
         Ores = ores;
         Clays = clays;
         Obsidians = obsidians;
-        Geodes = geodes;
         OreRobots = oreRobots;
         ClayRobots = clayRobots;
         ObsidianRobots = obsidianRobots;
         GeodeRobots = geodeRobots;
     }
 
-    public byte GetBestValue(Dictionary<int,byte> bestValues, int bestValueSofarInThisLevel)
+    public static int TheoreticalGeodeCount(int timeLeft)
     {
-        if (TimeLeft <= 0) return (byte)Geodes;
-
-        // max amount of geodes we could produce... (if we got .. idk) maybe not working props
-        if (bestValueSofarInThisLevel > Geodes + TimeLeft * (GeodeRobots + 1))
+        var geodes = 0;
+        for (int i = timeLeft; i > 0; i--)
         {
-            return 0;
+            // we could create time-1 geodes after each geodeRobot creation?
+            geodes += i - 1;
         }
 
+        return geodes;
+    }
+
+    // take out geodes from props too?
+    public byte GetHowManyGeodesCanBeGotten(Dictionary<int,byte> bestValues, int bestValueSofarInThisLevel)
+    {
+        if (TimeLeft == 1) return (byte)GeodeRobots;
+
+        // max amount of geodes we could produce... (if we got .. idk) maybe not working props
+        var maxLimit = GeodeRobots * TimeLeft + TheoreticalGeodeCount(TimeLeft);
+        if (bestValueSofarInThisLevel > maxLimit) return 0;
+
         // can do 1 of 5 things: buy each robot or buy nothing..
-        var subProblems = new List<RobotBuildingScenario> { CreateNothing() };
-        if (Ores >= Blueprint.OreRobotCostInOre) subProblems.Add(CreateOreRobot());
-        if (Ores >= Blueprint.ClayRobotCostInOre) subProblems.Add(CreateClayRobot());
-        if (Ores >= Blueprint.ObsidianRobotCostInOre && Clays >= Blueprint.ObsidianRobotCostInClay) subProblems.Add(CreateObsidianRobot());
+        var subProblems = new List<RobotBuildingScenario> ();
         if (Ores >= Blueprint.GeodeRobotCostInOre && Obsidians >= Blueprint.GeodeRobotCostInObsidian) subProblems.Add(CreateGeodeRobot());
+        if (Ores >= Blueprint.ObsidianRobotCostInOre && Clays >= Blueprint.ObsidianRobotCostInClay) subProblems.Add(CreateObsidianRobot());
+        if (Ores >= Blueprint.ClayRobotCostInOre) subProblems.Add(CreateClayRobot());
+        if (Ores >= Blueprint.OreRobotCostInOre) subProblems.Add(CreateOreRobot());
+        subProblems.Add(CreateNothing());
 
         byte bestValue = 0;
         foreach (var p in subProblems)
         {
             byte subProblemBestValue;
-            var subProblemHash = p.GetHashCode();
+            //var subProblemHash = p.GetHashCode();
+            var subProblemHash = p.GetHashCodeWoGeodes();
             if (bestValues.ContainsKey(subProblemHash))
             {
                 subProblemBestValue = bestValues[subProblemHash]; // is this ok?
             } else
             {
-                subProblemBestValue = p.GetBestValue(bestValues, bestValue);
+                subProblemBestValue = p.GetHowManyGeodesCanBeGotten(bestValues, bestValue);
                 bestValues.Add(subProblemHash, subProblemBestValue);
             }
             if (bestValue < subProblemBestValue) bestValue = subProblemBestValue;
         }
 
-        return bestValue;
+        // return bestValue;
+        return (byte)(bestValue + GeodeRobots);
     }
 
     private RobotBuildingScenario CreateNothing()
     {
         return new RobotBuildingScenario(Blueprint, TimeLeft - 1,
-            Ores + OreRobots, Clays + ClayRobots, Obsidians + ObsidianRobots, Geodes + GeodeRobots,
+            Ores + OreRobots, Clays + ClayRobots, Obsidians + ObsidianRobots,
             OreRobots, ClayRobots, ObsidianRobots, GeodeRobots);
     }
 
@@ -150,7 +163,7 @@ public sealed class RobotBuildingScenario
     {
         var newOres = Ores - Blueprint.OreRobotCostInOre;
         return new RobotBuildingScenario(Blueprint, TimeLeft - 1,
-            newOres + OreRobots, Clays + ClayRobots, Obsidians + ObsidianRobots, Geodes + GeodeRobots,
+            newOres + OreRobots, Clays + ClayRobots, Obsidians + ObsidianRobots,
             OreRobots + 1, ClayRobots, ObsidianRobots, GeodeRobots);
     }
 
@@ -158,7 +171,7 @@ public sealed class RobotBuildingScenario
     {
         var newOres = Ores - Blueprint.ClayRobotCostInOre;
         return new RobotBuildingScenario(Blueprint, TimeLeft - 1,
-            newOres + OreRobots, Clays + ClayRobots, Obsidians + ObsidianRobots, Geodes + GeodeRobots,
+            newOres + OreRobots, Clays + ClayRobots, Obsidians + ObsidianRobots,
             OreRobots, ClayRobots + 1, ObsidianRobots, GeodeRobots);
     }
 
@@ -167,7 +180,7 @@ public sealed class RobotBuildingScenario
         var newOres = Ores - Blueprint.ObsidianRobotCostInOre;
         var newClays = Clays - Blueprint.ObsidianRobotCostInClay;
         return new RobotBuildingScenario(Blueprint, TimeLeft - 1,
-            newOres + OreRobots, newClays + ClayRobots, Obsidians + ObsidianRobots, Geodes + GeodeRobots,
+            newOres + OreRobots, newClays + ClayRobots, Obsidians + ObsidianRobots,
             OreRobots, ClayRobots, ObsidianRobots + 1, GeodeRobots);
     }
 
@@ -176,7 +189,7 @@ public sealed class RobotBuildingScenario
         var newOres = Ores - Blueprint.GeodeRobotCostInOre;
         var newObsidians = Obsidians - Blueprint.GeodeRobotCostInObsidian;
         return new RobotBuildingScenario(Blueprint, TimeLeft - 1,
-            newOres + OreRobots, Clays + ClayRobots, newObsidians + ObsidianRobots, Geodes + GeodeRobots,
+            newOres + OreRobots, Clays + ClayRobots, newObsidians + ObsidianRobots,
             OreRobots, ClayRobots, ObsidianRobots, GeodeRobots + 1);
     }
 
@@ -190,6 +203,20 @@ public sealed class RobotBuildingScenario
         hash += ClayRobots * 1000020;
         hash += ObsidianRobots * 1039000;
         hash += GeodeRobots * 10009000;
+        hash = hash * 23 + TimeLeft * 39700;
+
+        return hash;
+    }
+
+    public int GetHashCodeWoGeodes()
+    {
+        var hash = Ores;
+        hash += Clays * 100;
+        hash += Obsidians * 1000;
+        hash += OreRobots * 10099;
+        hash += ClayRobots * 100000;
+        hash += ObsidianRobots * 1000020;
+        hash += GeodeRobots * 1039000;
         hash = hash * 23 + TimeLeft * 39700;
 
         return hash;
