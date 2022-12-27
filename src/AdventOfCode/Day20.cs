@@ -15,7 +15,6 @@ public class Day20 : BaseDay
     {
         var file = new EncryptedFile(_input);
 
-        var myList = file.MixFile();
         Console.Clear();
         var result = file.FindGroveCoordinates();
         return new(result.ToString());
@@ -23,7 +22,10 @@ public class Day20 : BaseDay
 
     public override ValueTask<string> Solve_2()
     {
-        return new(2.ToString());
+        var file = new EncryptedFile(_input);
+
+        var result = file.FindGroveCoordinatesWithKey();
+        return new(result.ToString());
     }
 }
 
@@ -38,8 +40,6 @@ public sealed class EncryptedFile
     public int FindGroveCoordinates()
     {
         var mixed = MixFile();
-        var max = mixed.Max();
-        var min = mixed.Min();
 
         var result = FindNthNumberAfterZero(mixed, 1000)
             + FindNthNumberAfterZero(mixed, 2000)
@@ -48,9 +48,48 @@ public sealed class EncryptedFile
         return result;
     }
 
+    public long FindGroveCoordinatesWithKey()
+    {
+        var mixed = MixFileWithKey();
+        var result = FindNthNumberAfterZero(mixed, 1000)
+            + FindNthNumberAfterZero(mixed, 2000)
+            + FindNthNumberAfterZero(mixed, 3000);
+
+        return result;
+    }
+
+    public long[] MixFileWithKey()
+    {
+        var list = Original.Select((x, i) => (value: ((long)x)*811589153L, originalIndex: i)).ToList();
+        for (int k = 0; k < 10; k++) { 
+            for (int i = 0; i < Original.Length; i++)
+            {
+                MoveValueLon(list, i);
+            }
+        }
+
+        return list.Select(n => n.value).ToArray();
+    }
+
+    public static void MoveValueLon(List<(long value, int originalIndex)> list, int i)
+    {
+        var currentIndex = list.FindIndex(n => n.originalIndex == i);
+        var value = list[currentIndex].value;
+        if (value == 0) return;
+
+        var newIndex = currentIndex + value;
+        list.RemoveAt(currentIndex);
+
+        if (newIndex >= list.Count) newIndex %= list.Count;
+        if (newIndex <= 0)
+            newIndex = list.Count + (newIndex % list.Count);
+
+        list.Insert((int)newIndex, (value, i));
+    }
+
     public int[] MixFile()
     {
-        var list = Original.Select(x => (value: x, visited: false)).ToList(); // 2nd vlaue = visited
+        var list = Original.Select(x => (value: x, visited: false)).ToList();
         int i = 0;
         while (i < Original.Length)
         {
@@ -84,6 +123,12 @@ public sealed class EncryptedFile
     }
 
     public static int FindNthNumberAfterZero(int[] numbers, int n)
+    {
+        var zeroIndex = Array.IndexOf(numbers, 0);
+        var newIndex = (zeroIndex + n) % numbers.Length;
+        return numbers[newIndex];
+    }
+    public static long FindNthNumberAfterZero(long[] numbers, int n)
     {
         var zeroIndex = Array.IndexOf(numbers, 0);
         var newIndex = (zeroIndex + n) % numbers.Length;
