@@ -2,7 +2,7 @@ Learning C# with Advent of Code 2022 https://adventofcode.com/2022
 
 Helpers and template from https://github.com/eduherminio/AdventOfCode.Template
 
-Solved all before the year end! Some solutions I'm happy about, some solutions not that much. TODO some cleaning...
+Solved all before the year end! Managed to do without looking at others' solutions. Some solutions I'm happy about, some solutions not that much, but at least I learned a lot! TODO some cleaning...
 
 ![image](https://user-images.githubusercontent.com/6433408/210100770-77e2fbe7-f77d-4d1e-9443-341937ce12e4.png)
 
