@@ -39,15 +39,17 @@ public sealed class BlizzardBasin
     private int _maxY;
     private int _maxX;
     private readonly BlizzardCell[] _movementFlags = new BlizzardCell[4] { BlizzardCell.Up, BlizzardCell.Down, BlizzardCell.Left, BlizzardCell.Right };
-    private readonly BlizzardCell[][,] _blizzardPositions;
+    //private readonly BlizzardCell[][,] _blizzardPositions;
+    private readonly HashSet<(int x, int y)>[] _safePositions;
     private readonly int _blizzardRotation;
 
     public BlizzardBasin(string input)
     {
         StartingPosition = (0, -1);
         ParseInput(input);
-        _blizzardPositions = PopulateBlizzardPositions();
-        _blizzardRotation = _blizzardPositions.Length;
+        //_blizzardPositions = PopulateBlizzardPositions();
+        _safePositions = PopulateBlizzardPositions();
+        _blizzardRotation = _safePositions.Length;
     }
 
     public static bool SequenceEquals<TBlizzardCell>(TBlizzardCell[,] a, TBlizzardCell[,] b) => 
@@ -69,25 +71,23 @@ public sealed class BlizzardBasin
         var start = new Position(startPos, startMinute, targetPos);
         var best = int.MaxValue;
 
-        var visited = new List<Position>();
-
-        var unvisited = new PriorityQueue<Position, int>();
-        unvisited.Enqueue(start, start.DistanceToTarget * 100 + start.Minute);
+       var visited = new HashSet<Position>();
+       var unvisited = new PriorityQueue<Position, int>();
+        unvisited.Enqueue(start, 0);
 
         while (unvisited.Count != 0)
         {
 
-            var dfsPos = unvisited.Dequeue();
-            var pos = dfsPos.Pos;
-            var minute = dfsPos.Minute;
+            var position = unvisited.Dequeue();
+            var pos = position.Pos;
+            var minute = position.Minute;
 
-            if (minute + dfsPos.DistanceToTarget >= best) continue;
+            if (minute + position.DistanceToTarget >= best) continue;
 
-            if (visited.Any(v => v.Pos.x == pos.x && v.Pos.y == pos.y && v.Minute % _blizzardRotation == minute % _blizzardRotation)) 
-                // so if we have been here in the same blizzard position
+            // wow! chaning this from a list with comparisons to a hashset/dictionary daramatically increased performance
+            if (visited.Contains(position))
                 continue;
-
-            visited.Add(dfsPos);
+            visited.Add(position);
 
             if (pos.y == targetPos.y && pos.x == targetPos.x)
             {
@@ -95,21 +95,21 @@ public sealed class BlizzardBasin
                 continue;
             }
 
-            var blizzardsNextMinute = _blizzardPositions[(minute + 1) % _blizzardRotation];
-            var possibleMoves = GetPossibleMovements(pos.x, pos.y, blizzardsNextMinute);
+            var safePositionsNextMinute = _safePositions[(minute + 1) % _blizzardRotation];
+            var possibleMoves = GetPossibleMovements(pos.x, pos.y, safePositionsNextMinute);
             foreach (var newPos in possibleMoves.Select(move => new Position(move, minute + 1, targetPos)))
             {
-                unvisited.Enqueue(newPos, newPos.DistanceToTarget * 100 + newPos.Minute );
+                unvisited.Enqueue(newPos, newPos.DistanceToTarget * 1000 + newPos.Minute );
             }
         }
         return best;
     }
 
-    private struct Position
+    private record struct Position
     {
-        public (int x, int y) Pos { get; set; }
+        public (int x, int y) Pos { get; }
         public int DistanceToTarget { get; }
-        public int Minute { get; set; }
+        public int Minute { get; }
         public Position((int x, int y) pos, int minute, (int x, int y) target) { 
             Pos = pos; 
             Minute = minute;
@@ -118,13 +118,13 @@ public sealed class BlizzardBasin
 
     }
 
-    private List<(int x, int y)> GetPossibleMovements(int x, int y, BlizzardCell[,] blizzards)
+    private List<(int x, int y)> GetPossibleMovements(int x, int y, HashSet<(int x, int y)> safePositions)
     {
         var list = new List<(int x, int y)>();
         if (y == -1) // starting pos - down or wait are only options
         {
             list.Add((x, y)); // Wait
-            if (blizzards[x, y + 1] == BlizzardCell.None) list.Add((x, y + 1)); // Down
+            if (safePositions.Contains((x, y + 1))) list.Add((x, y + 1)); // Down
             return list;
         }
         // one below starting pos - can move up
@@ -134,7 +134,7 @@ public sealed class BlizzardBasin
         if (y == Target.y && x == Target.x)
         {
             list.Add((x, y)); // Wait
-            if (blizzards[x, y - 1] == BlizzardCell.None) list.Add((x, y - 1)); // Up
+            if (safePositions.Contains((x, y - 1))) list.Add((x, y - 1)); // Up
             return list;
         }
         if (y == Target.y - 1 && x == Target.x)
@@ -142,11 +142,11 @@ public sealed class BlizzardBasin
             list.Add((x, y + 1)); // Down
         }
 
-        if (y < _maxY && blizzards[x, y + 1] == BlizzardCell.None) list.Add((x, y + 1)); // Down
-        if (blizzards[x, y] == BlizzardCell.None) list.Add((x, y)); // Wait
-        if (y > 0 && blizzards[x, y - 1] == BlizzardCell.None) list.Add((x, y - 1)); // Up
-        if (x > 0 && blizzards[x - 1, y] == BlizzardCell.None) list.Add((x - 1, y)); // Left
-        if (x < _maxX && blizzards[x + 1, y] == BlizzardCell.None) list.Add((x + 1, y)); // Right
+        if (y < _maxY && safePositions.Contains((x, y + 1))) list.Add((x, y + 1)); // Down
+        if (safePositions.Contains((x, y))) list.Add((x, y)); // Wait
+        if (y > 0 && safePositions.Contains((x, y - 1))) list.Add((x, y - 1)); // Up
+        if (x > 0 && safePositions.Contains((x - 1, y))) list.Add((x - 1, y)); // Left
+        if (x < _maxX && safePositions.Contains((x + 1, y))) list.Add((x + 1, y)); // Right
 
         // empty list = no movements, you're dead
         return list;
@@ -172,6 +172,21 @@ public sealed class BlizzardBasin
         return newPositions;
     }
 
+    private HashSet<(int x, int y)> ConvertToSafePositionMap(BlizzardCell[,] blizzards)
+    {
+        var safePositions = new HashSet<(int x, int y)>();
+        for (var y = 0; y <= _maxY; y++)
+        {
+            for (var x = 0; x <= _maxX; x++)
+            {
+                if (blizzards[x, y] == BlizzardCell.None)
+                    safePositions.Add((x, y));
+            }
+        }
+
+        return safePositions;
+    }
+
     private (int x, int y) GetNewPos(int x, int y, BlizzardCell cell) =>  
         cell switch
         {
@@ -182,20 +197,23 @@ public sealed class BlizzardBasin
             _ => throw new Exception()
         };
 
-    public BlizzardCell[][,] PopulateBlizzardPositions()
+    public HashSet<(int x, int y)>[] PopulateBlizzardPositions()
     {
         var blizzardPositions = new List<BlizzardCell[,]>();
+        var safePositions = new List<HashSet<(int x, int y)>>();
         var current = StartingBlizzards;
         while (true)
         {
             blizzardPositions.Add(current);
-
+            safePositions.Add(ConvertToSafePositionMap(current));
             current = AdvanceMinute(current);
+
             if (blizzardPositions.Any(p => SequenceEquals(p, current)))
                 break;
         }
 
-        return blizzardPositions.ToArray();
+        //return blizzardPositions.ToArray();
+        return safePositions.ToArray();
     }
 
     private void ParseInput(string input)
