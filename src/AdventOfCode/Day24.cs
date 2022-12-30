@@ -28,7 +28,8 @@ public class Day24 : BaseDay
     }
 }
 
-// This is very slow. 
+// Should be cleaned and simplified :)
+// lots of unnecessary stuff left hanigng around
 
 public sealed class BlizzardBasin
 {
