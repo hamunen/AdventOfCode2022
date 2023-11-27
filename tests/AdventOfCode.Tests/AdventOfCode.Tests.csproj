@@ -19,7 +19,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-	 <PackageReference Include="AoCHelper" Version="2.0.2" />
+	 <PackageReference Include="AoCHelper" Version="3.0.0" />
   </ItemGroup>
 
   <ItemGroup>
